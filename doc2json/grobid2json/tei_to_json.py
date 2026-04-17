@@ -122,45 +122,45 @@ def table_to_html(table: bs4.element.Tag) -> str:
 
 
 def extract_figures_and_tables_from_tei_xml(sp: BeautifulSoup) -> Dict[str, Dict]:
-    """
-    Generate figure and table dicts
-    :param sp:
-    :return:
-    """
     ref_map = dict()
 
     for fig in sp.find_all("figure"):
-        try:
-            if fig.name and fig.get("xml:id"):
-                if fig.get("type") == "table":
-                    ref_map[normalize_grobid_id(fig.get("xml:id"))] = {
-                        "text": fig.figDesc.text.strip()
-                        if fig.figDesc
-                        else fig.head.text.strip()
-                        if fig.head
-                        else "",
-                        "latex": None,
-                        "type": "table",
-                        "content": table_to_html(fig.table),
-                        "fig_num": fig.get("xml:id"),
-                    }
-                else:
-                    if True in [
-                        char.isdigit()
-                        for char in fig.findNext("head").findNext("label")
-                    ]:
-                        fig_num = fig.findNext("head").findNext("label").contents[0]
-                    else:
-                        fig_num = None
-                    ref_map[normalize_grobid_id(fig.get("xml:id"))] = {
-                        "text": fig.figDesc.text.strip() if fig.figDesc else "",
-                        "latex": None,
-                        "type": "figure",
-                        "content": "",
-                        "fig_num": fig_num,
-                    }
-        except AttributeError:
+        if not (fig.name and fig.get("xml:id")):
+            fig.decompose()
             continue
+
+        try:
+            if fig.get("type") == "table":
+                ref_map[normalize_grobid_id(fig.get("xml:id"))] = {
+                    "text": fig.figDesc.text.strip()
+                    if fig.figDesc
+                    else fig.head.text.strip()
+                    if fig.head
+                    else "",
+                    "latex": None,
+                    "type": "table",
+                    "content": table_to_html(fig.table) if fig.table else "",
+                    "fig_num": fig.get("xml:id"),
+                }
+            else:
+                head = fig.find("head")
+                label = head.find("label") if head else None
+                label_text = label.get_text(strip=True) if label else ""
+
+                fig_num = (
+                    label_text if any(char.isdigit() for char in label_text) else None
+                )
+
+                ref_map[normalize_grobid_id(fig.get("xml:id"))] = {
+                    "text": fig.figDesc.text.strip() if fig.figDesc else "",
+                    "latex": None,
+                    "type": "figure",
+                    "content": "",
+                    "fig_num": fig_num,
+                }
+        except AttributeError:
+            pass
+
         fig.decompose()
 
     return ref_map
