@@ -62,6 +62,16 @@ python doc2json/grobid2json/process_pdf.py -i tests/pdf/N18-3011.pdf -t temp_dir
 
 This will generate a JSON file in the specified `output_dir`. If unspecified, the file will be in the `output/` directory from your path.
 
+### Process all PDFs in a directory
+
+Once Grobid is running, you can batch process every PDF under `input_dir/` with:
+
+```console
+bash scripts/process_all_pdfs.sh input_dir/ temp_dir/ output_dir/
+```
+
+If you omit arguments, the script defaults to repo-root `input_dir/`, `temp_dir/`, and `output_dir/`. Existing JSON outputs are skipped.
+
 ## LaTeX Processing
 
 If you want to process LaTeX, in addition to installing Grobid, you also need to install the following libraries:
@@ -141,4 +151,3 @@ If you use this utility in your research, please cite:
 Contributions are welcome. Note the embarassingly poor test coverage. Also, please note this pipeline is not perfect. It will miss text or make errors on most PDFs. The current PDF to JSON step uses Grobid; we may replace this with a different model in the future.
 
 Issues: contact `lucyw@allenai.org` or `kylel@allenai.org`
-
