@@ -9,13 +9,15 @@ INPUT_DIR="${1:-${REPO_ROOT}/input_dir}"
 TEMP_DIR="${2:-${REPO_ROOT}/temp_dir}"
 OUTPUT_DIR="${3:-${REPO_ROOT}/output_dir}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
+LOG_DIR="${REPO_ROOT}/log"
+ERROR_LOG="${LOG_DIR}/errors.log"
 
 if [[ ! -d "${INPUT_DIR}" ]]; then
     echo "input directory does not exist: ${INPUT_DIR}" >&2
     exit 1
 fi
 
-mkdir -p "${TEMP_DIR}" "${OUTPUT_DIR}"
+mkdir -p "${TEMP_DIR}" "${OUTPUT_DIR}" "${LOG_DIR}"
 
 processed_count=0
 skipped_count=0
@@ -38,13 +40,23 @@ while IFS= read -r -d '' pdf_file; do
     fi
 
     echo "process: ${pdf_file}"
+    error_tmp="$(mktemp)"
     if "${PYTHON_BIN}" -m doc2json.grobid2json.process_pdf \
         -i "${pdf_file}" \
         -t "${TEMP_DIR}" \
-        -o "${OUTPUT_DIR}"; then
+        -o "${OUTPUT_DIR}" \
+        2>"${error_tmp}"; then
         processed_count=$((processed_count + 1))
+        rm -f "${error_tmp}"
     else
         echo "failed: ${pdf_file}" >&2
+        {
+            printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S %Z')" "${pdf_file}"
+            cat "${error_tmp}"
+            printf '\n'
+        } >> "${ERROR_LOG}"
+        cat "${error_tmp}" >&2
+        rm -f "${error_tmp}"
         failed_count=$((failed_count + 1))
     fi
 done < <(find "${INPUT_DIR}" -type f \( -iname '*.pdf' \) -print0)
